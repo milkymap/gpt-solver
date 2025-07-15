@@ -118,3 +118,60 @@ EXECUTE_BASH = {
         "required": ["command"]
     }
 }
+
+GENERATE_CODE = {
+    "type": "function",
+    "function": {
+        "name": "generate_code",
+        "description": """
+        Generate code based on a given query and return the complete source code.
+        This function provides:
+        - Code generation based on natural language queries
+        - Support for any programming language
+        - Generation of complete source code files
+        - Support for any valid programming language
+        - Full code generation capabilities
+        - Use gemini 2.5 pro for complex tasks
+        - Use gemini 2.5 flash for simple tasks (realy fast)
+        - max output tokens should be between 8192 and 16384
+        """,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "The path to the file to generate code for"},
+                "query": {"type": "string", "description": "The query to generate code for, should be a very detailed description"},
+                "language": {"type": "string", "description": "The programming language to use for code generation"},
+                "model": {"type": "string", "enum": ["gemini-2.5-pro", "gemini-2.5-flash"]},
+                "thinking_budget": {"type": "integer", "default": 1000, "description": "The budget for the thinking process, choose a value between 1000 and 3000"},
+                "max_output_tokens": {"type": "integer", "default": 16384, "description": "The maximum number of tokens to generate in the output, can go up to 16384"}
+            }
+        },
+        "required": ["file_path", "query", "model"],
+    }
+}
+
+BUILD_PLAN = {
+    "type": "function",
+    "function": {
+        "name": "build_plan",
+        "description": """
+        Build a plan for a given task and return the complete plan.
+        This function provides:
+        - Plan generation based on natural language tasks
+        - Support for any task
+        - Generation of complete plans
+        - Support for any valid task
+        - Full plan generation capabilities
+        - Use o3 for complex tasks
+        """,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {"type": "string", "description": "The task to build a plan for"},
+                "reasoning_effort": {"type": "string", "enum": ["low", "medium", "high"], "default": "medium"},
+                "model": {"type": "string", "enum": ["o3", "o3-mini", "o4", "o3-mini-high"]}
+            }
+        },
+        "required": ["task", "reasoning_effort", "model"]
+    }
+}

@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.2.1",
+    "google-genai>=1.25.0",
     "openai>=1.95.1",
     "python-dotenv>=1.1.1",
     "pyzmq>=27.0.0",

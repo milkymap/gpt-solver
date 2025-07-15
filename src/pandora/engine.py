@@ -15,11 +15,10 @@ from pandora.tools import ToolsHandler
 
 
 class Engine:
-    def __init__(self, openai_api_key:str, model:str="gpt-4.1"):
-        assert openai_api_key
-        self.openai_client = AsyncOpenAI(api_key=openai_api_key)
+    def __init__(self, openai_api_key:str, gemini_api_key:str, model:str="gpt-4.1"):
         self.model = model 
-        self.tools_handler = ToolsHandler(openai_api_key=openai_api_key)
+        self.openai_client = AsyncOpenAI(api_key=openai_api_key)
+        self.tools_handler = ToolsHandler(openai_api_key=openai_api_key, gemini_api_key=gemini_api_key)
     
     async def handle_messages(self, messages:List[ChatMessage]) -> AsyncIterable[ChatCompletionChunk]:
         response = await self.openai_client.chat.completions.create(
@@ -113,10 +112,10 @@ class Engine:
         arguments = tool_call.function.arguments
         try:
             kwargs = json.loads(arguments)
-            print(f"kwargs {kwargs}")
+            print(json.dumps(kwargs, indent=3))
             target_function = attrgetter(name)(self.tools_handler)
             result = await target_function(**kwargs)
-            print(f"result {result}")
+            print(result)
         except Exception as e:
             logger.error(e)
             result = f"Error: {str(e)}"
@@ -131,5 +130,5 @@ if __name__ == "__main__":
     from os import getenv
     from dotenv import load_dotenv
     load_dotenv()
-    engine = Engine(openai_api_key=getenv("OPENAI_API_KEY"))
+    engine = Engine(openai_api_key=getenv("OPENAI_API_KEY"), gemini_api_key=getenv("GEMINI_API_KEY"))
     asyncio.run(engine.loop())
