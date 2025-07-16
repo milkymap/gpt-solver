@@ -11,4 +11,4 @@ wheels/
 .env
 
 workspace/
-mcp-servers.json
+config
