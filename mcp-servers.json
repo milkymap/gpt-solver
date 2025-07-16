@@ -1,0 +1,26 @@
+{
+    "mcpServers": {
+        "ElevenLabs": {
+            "command": "uvx",
+            "args": ["elevenlabs-mcp"],
+            "env": {
+                "ELEVENLABS_API_KEY": "sk_9a1ec4f4198a4e4b97253a2b3e1dc1d8739e06376f319d83"
+            }
+        }
+        ,
+        "BraveSearchEngine": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-brave-search"
+            ],
+            "env": {
+                "BRAVE_API_KEY": "BSAtqnwEDWiWBbfuxBYII2KcEdI90QZ"
+            }
+        },
+        "UptoDateDocumentation": {
+            "command": "npx",
+            "args": ["-y", "@upstash/context7-mcp@latest"]
+        }
+    }
+}
