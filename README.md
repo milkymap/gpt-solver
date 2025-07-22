@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![UV](https://img.shields.io/badge/uv-managed-blue.svg)](https://github.com/astral-sh/uv)
 
-Pandora is an advanced autonomous AI agent framework implementing the **Universal Vertex (UV) Algorithm** for orchestrating complex multi-step tasks through structured reasoning and tool execution. Built with mathematical rigor and extensible architecture, Pandora provides a foundation for intelligent agent systems that can plan, execute, and adapt autonomously.
+Pandora is an advanced autonomous AI agent framework implementing an agent loop with  ** Finite State Machine** for orchestrating complex multi-step tasks through structured reasoning and tool execution. Built with mathematical rigor and extensible architecture, Pandora provides a foundation for intelligent agent systems that can plan, execute, and adapt autonomously.
 
 ---
 
