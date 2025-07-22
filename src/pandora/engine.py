@@ -1,5 +1,6 @@
 import asyncio 
 import json
+import re 
 from enum import Enum
 from operator import itemgetter, attrgetter
 from typing import List, Tuple, Dict, Any, Optional, AsyncIterable, AsyncGenerator, Self
@@ -18,15 +19,23 @@ from pandora.mcp_servers_handler import MCPHandler
 
 from pandora.definitions import (
     PRINT_MESSAGE, READ_FILE, CREATE_FILE, 
-    EDIT_FILE, SEARCH_THROUGH_INTERNET, GENERATE_PLAN, EXECUTE_BASH
+    EDIT_FILE, SEARCH_THROUGH_WEB, GENERATE_PLAN, EXECUTE_BASH, APPLY_REGEX
 )
 
+FLAGS = ["IGNORECASE", "MULTILINE", "DOTALL", "VERBOSE", "ASCII", "LOCALE"]
+
+# nice, please create a workspace dir and inside, create a full python project for clustering with sentence transformers and umap, this will build clustering image. create a plan and think step bu step. do not install depdenencies, modular project.
+
 class Engine:
-    def __init__(self, mcp_handler:MCPHandler, openai_api_key:str, model:str="gpt-4.1"):
+    def __init__(self, mcp_handler:MCPHandler, openai_api_key:str, model:str="gpt-4.1", parallel_tool_calls:bool=True):
         self.model = model 
+        self.openai_api_key = openai_api_key
+         
         self.openai_client = AsyncOpenAI(api_key=openai_api_key)
+        self.parallel_tool_calls = parallel_tool_calls
+        
         self.mcp_handler = mcp_handler
-        self.internal_state = 0  # 0: open-loop, 1: closed-loop
+        self.internal_state = 0  # 0: interactive, 1: autonomous
         
     async def __aenter__(self) -> Self:
         return self
@@ -39,7 +48,7 @@ class Engine:
     async def handle_messages(self, messages:List[ChatMessage]) -> AsyncIterable[ChatCompletionChunk]:
         tools = [
             PRINT_MESSAGE, READ_FILE, CREATE_FILE, 
-            EDIT_FILE, SEARCH_THROUGH_INTERNET, GENERATE_PLAN, EXECUTE_BASH
+            EDIT_FILE, SEARCH_THROUGH_WEB, GENERATE_PLAN, EXECUTE_BASH, APPLY_REGEX
         ]
         for tool in self.mcp_handler.get_tools():
             tools.append({
@@ -50,6 +59,8 @@ class Engine:
                     "parameters": tool["inputSchema"]
                 }
             })
+
+       
         response = await self.openai_client.chat.completions.create(
             model=self.model,
             messages=[
@@ -59,9 +70,10 @@ class Engine:
             stream=True, 
             max_tokens=8192,
             tool_choice="required",
-            parallel_tool_calls=True,
-            tools=tools
+            tools=tools,
+            parallel_tool_calls=self.parallel_tool_calls,
         )
+
         return response
     
     async def handle_response(self, response:AsyncIterable[ChatCompletionChunk]) -> Tuple[str, str, Dict[int, Dict[str, Any]]]:
@@ -80,6 +92,7 @@ class Engine:
                 continue
             if tool_calls[0].index not in tools_hmap:
                 tools_hmap[tool_calls[0].index] = tool_calls[0]
+                logger.info(f"{tool_calls[0].function.name} will be called")
                 continue
 
             tools_hmap[tool_calls[0].index].function.arguments += tool_calls[0].function.arguments
@@ -119,7 +132,7 @@ class Engine:
         finish_reason, messages = FinishReason.STOP, []
         while keep_looping:
             try:
-                if self.internal_state == 0:  # open-loop: agent/user conversation
+                if self.internal_state == 0 or finish_reason != FinishReason.TOOL_CALLS:  # interactive mode: agent/user conversation
                     query = input("Enter a query: ")
                     messages.append(ChatMessage(role=Role.USER, content=query))
                 if query in ["EXIT", "exit", "q", "quit"]:
@@ -141,6 +154,10 @@ class Engine:
         name = tool_call.function.name
         arguments = tool_call.function.arguments
         try:
+            if self.internal_state == 0:  # interactive mode: agent/user conversation
+                if name != "print_message":
+                    self.internal_state = 1 # change to autonomous mode
+                    raise ValueError(f"Tool {name} is not allowed in interactive mode, only print_message is allowed")
             kwargs = json.loads(arguments)
             print("="*50)
             print(name)
@@ -167,16 +184,16 @@ class Engine:
     
     async def print_message(self, message:str, message_type:str="reply") -> str:
         match message_type:
-            case "reply" | "question":
+            case "reply" | "ask" | "confirm":
                 self.internal_state = 0
-            case "notify" | "think" | "update":
+            case "notify" | "think" | "update" | "analyze":
                 self.internal_state = 1
             case _:
                 raise ValueError(f"Invalid message type: {message_type}")
         return json.dumps({
             "message": message,
             "message_type": message_type,
-            "agent_loop_state": "open-loop" if self.internal_state == 0 else "closed-loop"
+            "agent_loop_state": "interactive" if self.internal_state == 0 else "autonomous"
         }, indent=3)
     
     async def read_file(self, file_path:str) -> str:
@@ -248,7 +265,7 @@ class Engine:
             file.write(new_content)
         return f"File {file_path} was edited, you can now read the file to see the changes"
     
-    async def search_through_internet(self, query:str, model:str="gpt-4o-mini-search-preview", search_context_size:str="low", max_tokens:int=1024) -> str:
+    async def search_through_web(self, query:str, model:str="gpt-4o-mini-search-preview", search_context_size:str="low", max_tokens:int=1024) -> str:
         response = await self.openai_client.chat.completions.create(
             model=model,
             web_search_options={
@@ -290,29 +307,22 @@ class Engine:
         AVAILABLE TOOLS FOR EXECUTION:
         - read_file: Read file contents
         - create_file: Create/overwrite files
-        - update_file: Modify existing files
-        - search_through_internet: Search for files
+        - edit_file: Modify existing files (use llm to edit/change the file)
+        - apply_regex: Apply regex to files (fast editing)
+        - search_through_web: Search the web for information
         - execute_bash: Run shell commands
         - generate_plan: Create a plan for a given task
+        - manage_tasks: Manage tasks (create, update, delete, list)
 
         PLAN OUTPUT FORMAT:
         - generate a set of steps to complete the task
+        - each step must be described by:
+        - title: a short title for the step
+        - description: a detailed description of the step
+        - priority: the priority of the step (high, medium, low)
         """
 
-        class StepPriority(str, Enum):
-            HIGH = "high"
-            MEDIUM = "medium"
-            LOW = "low"
-
-        class Step(BaseModel):
-            title: str
-            description: str
-            priority:StepPriority
-
-        class Plan(BaseModel):
-            steps: List[Step]
-
-        response = await self.openai_client.beta.chat.completions.parse(
+        response = await self.openai_client.chat.completions.parse(
             model=model,
             messages=[
                 {
@@ -326,8 +336,62 @@ class Engine:
             ],
             max_completion_tokens=100_000,
             reasoning_effort=reasoning_effort,
-            response_format=Plan
         )
 
-        return response.choices[0].message.parsed.model_dump_json(indent=3)
+        return response.choices[0].message.content
+    
+    async def apply_regex(
+        self,
+        file_path: str,
+        pattern: str,
+        replacement: str,
+        flags: Optional[List[str]] = None,
+        count: int = 0,
+        ) -> str:
+        """Apply regex substitution to a file"""
+        
+        if not path.exists(file_path):
+            raise FileNotFoundError(f"File {file_path} does not exist")
+        
+        # Convert string flags to regex flags
+
+        regex_flags = 0
+        if flags:
+            for flag in flags:
+                if flag.upper() in FLAGS:
+                    regex_flags |= attrgetter(flag.upper())(re)
+                else:
+                    raise ValueError(f"Invalid regex flag: {flag}")
+        
+        # Read file content
+        with open(file_path, "r") as file:
+            original_content = file.read()
+        
+        try:
+            # Apply regex substitution
+            new_content = re.sub(
+                pattern=pattern,
+                repl=replacement,
+                string=original_content,
+                count=count,
+                flags=regex_flags
+            )
+            
+            # Write modified content back to file
+            with open(file_path, "w") as file:
+                file.write(new_content)
+            
+            return json.dumps({
+                "file_path": file_path,
+                "pattern": pattern,
+                "replacement": replacement,
+                "content_changed": original_content != new_content,
+                "original_length": len(original_content),
+                "new_length": len(new_content),
+                "new_content": new_content
+            }, indent=3)
+            
+        except re.error as e:
+            raise ValueError(f"Invalid regex pattern: {e}")
+    
 
