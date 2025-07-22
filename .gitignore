@@ -1,14 +1,25 @@
-# Python-generated files
+# Python
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+*.py[cod]
+*.so
+*
+.venv/
+env/
+venv/
+# Data & Checkpoints
+data/
+logs/
+checkpoints/
+outputs/
+# System
+.DS_Store
+.ipynb_checkpoints/
+*.log
+*.pth
+*.ckpt
 
-# Virtual environments
-.venv
+config/
+.claude/
+.pytest_cache/
+
 .env
-
-workspace/
-config
