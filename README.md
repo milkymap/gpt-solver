@@ -8,9 +8,9 @@ Pandora is an advanced autonomous AI agent framework implementing the **Universa
 
 ---
 
-## 🧮 The UV (Universal Vertex) Algorithm
+## 🧮 The finite state machine Algorithm
 
-Pandora implements a novel approach to agent control flow through the **Universal Vertex Algorithm**, which models agent behavior as a discrete action space with deterministic state transitions:
+Pandora implements a novel approach to agent control flow through the **finite state machine*, which models agent behavior as a discrete action space with deterministic state transitions:
 
 ### Mathematical Foundation
 
@@ -27,7 +27,7 @@ print_message → [action sequence] → print_message
 
 ### Control Flow Mapping
 
-The UV algorithm uses a control function `M: MessageType → {0, 1}`:
+The FSM algorithm uses a control function `M: MessageType → {0, 1}`:
 - **Interactive Mode** (`M = 0`): `{reply, ask, confirm}` → await user input
 - **Autonomous Mode** (`M = 1`): `{think, update, notify, analyze}` → continue execution
 
