@@ -23,14 +23,16 @@ PRINT_MESSAGE ={
         
         Message Types:
         - "think": Internal reasoning, planning, analysis, or decision-making processes
-        - "question": Seeking user input, clarification, guidance, confirmation, or making inquiries  
+        - "ask": Seeking user input, clarification, guidance, confirmation, or making inquiries  
         - "notify": General informational messages, explanations, or notifications
+        - "confirm": Seeking user confirmation for a decision or action  
+        - "analyze": Analyzing a situation, problem, or data (self-reflection)  
         - "update": Progress reports, status changes, or ongoing task information
         - "reply": Final results, completed work, conclusions, or task completion messages
 
         Typical Usage Patterns:
-        - reply and question are used for chatting with the user: this is an open-loop mode => agent -> user -> agent
-        - notify, think, update are used for long-running tasks: this is a closed-loop mode => agent -> task -> agent -> task -> ... -> agent
+        - reply, ask, confirm are used for chatting with the user: this is an interactive mode => agent -> user -> agent
+        - notify, think, update, analyze are used for long-running tasks: this is a autonomous mode => agent -> task -> agent -> task -> ... -> agent
 
         choose carefully the message type to use.
         """,
@@ -43,8 +45,8 @@ PRINT_MESSAGE ={
                 },
                 "message_type": {
                     "type": "string",
-                    "enum": ["think", "question", "notify", "update", "reply"],
-                    "default": "info",
+                    "enum": ["think", "ask", "confirm", "analyze" ,"notify", "update", "reply"],
+                    "default": "reply",
                     "description": "The type of message to display. It will be used to determine the message type and the way to display it to the user."
                 }
             }, 
@@ -153,10 +155,10 @@ EDIT_FILE = {
    }
 }
 
-SEARCH_THROUGH_INTERNET = {
+SEARCH_THROUGH_WEB = {
     "type": "function",
     "function": {
-        "name": "search_through_internet",
+        "name": "search_through_web",
         "description": """
         Search the internet for current information using AI-powered web search.
         This function enables:
@@ -207,28 +209,108 @@ EXECUTE_BASH = {
 }
 
 GENERATE_PLAN = {
+   "type": "function",
+   "function": {
+       "name": "generate_plan",
+       "description": """
+       Create comprehensive, actionable execution plans for complex tasks using advanced reasoning models.
+       
+       This function provides:
+       - Strategic breakdown of complex tasks into logical, sequential steps
+       - Detailed analysis of dependencies, constraints, and potential failure points
+       - Consideration of available tools and resource requirements
+       - Adaptive planning that can incorporate lessons from previous attempts
+       - Structured output with step priorities and detailed descriptions
+       - Advanced reasoning capabilities for complex problem-solving scenarios
+       
+       Planning Capabilities:
+       - Multi-step workflow design and coordination
+       - Risk assessment and error handling strategies
+       - Resource allocation and tool selection guidance
+       - Timeline and dependency management
+       - Iterative refinement when initial plans prove inadequate
+       
+       When to use:
+       - Complex tasks requiring multiple tools and coordination
+       - Research projects with unclear scope or methodology
+       - Technical implementations with many dependencies
+       - When previous approaches have failed and replanning is needed
+       - Multi-phase projects requiring systematic execution
+       
+       Model Selection Guide:
+       - o3: Most complex tasks requiring deep reasoning and novel problem-solving
+       - o3-mini: Moderate complexity tasks with clear structure
+       - o4-mini: Cutting-edge reasoning for the most demanding analytical tasks
+       
+       For replanning: Include context about previous attempts, what failed, and lessons learned in the task description.
+       """,
+       "parameters": {
+           "type": "object",
+           "properties": {
+               "task": {
+                   "type": "string", 
+                   "description": "The task to build a plan for. Include context about previous attempts, constraints, requirements, and any specific guidance for replanning scenarios."
+               },
+               "reasoning_effort": {
+                   "type": "string", 
+                   "enum": ["low", "medium", "high"], 
+                   "default": "medium",
+                   "description": "Level of reasoning depth: low for simple tasks, medium for standard planning, high for complex multi-faceted problems requiring deep analysis."
+               },
+               "model": {
+                   "type": "string", 
+                   "enum": ["o3", "o3-mini", "o4-mini"],
+                   "description": "Reasoning model to use based on task complexity and requirements."
+               }
+           },
+           "required": ["task", "reasoning_effort", "model"]
+       }
+   }
+}
+
+APPLY_REGEX = {
     "type": "function",
     "function": {
-        "name": "generate_plan",
+        "name": "apply_regex",
         "description": """
-        Build a plan for a given task and return the complete plan.
+        Apply regex pattern substitution to modify file content with precise pattern matching.
         This function provides:
-        - Plan generation based on natural language tasks
-        - Support for any task
-        - Generation of complete plans
-        - Support for any valid task
-        - Full plan generation capabilities
-        - Use o3 for complex tasks
-        return a sequence of steps to complete the task
+        - Powerful pattern-based find and replace operations
+        - Support for regex flags (IGNORECASE, MULTILINE, DOTALL, etc.)
+        - Limited or unlimited substitution counts
+        - Safe atomic file operations
+        
+        Use this when you need sophisticated pattern matching beyond simple string replacement on existing files.
+        The agent should first read the file to understand its structure before applying regex modifications.
+        This function is using python regex library under the hood.(import re)
         """,
         "parameters": {
             "type": "object",
             "properties": {
-                "task": {"type": "string", "description": "The task to build a plan for"},
-                "reasoning_effort": {"type": "string", "enum": ["low", "medium", "high"], "default": "medium"},
-                "model": {"type": "string", "enum": ["o3", "o3-mini", "o4", "o3-mini-high"]}
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to the file to modify"
+                },
+                "pattern": {
+                    "type": "string", 
+                    "description": "Regex pattern to match. Use raw strings for complex patterns."
+                },
+                "replacement": {
+                    "type": "string",
+                    "description": "Replacement string. Can include capture groups like \\1, \\2, etc."
+                },
+                "flags": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["IGNORECASE", "MULTILINE", "DOTALL", "VERBOSE", "ASCII", "LOCALE"]},
+                    "description": "List of regex flags to apply"
+                },
+                "count": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of substitutions to make. 0 means replace all occurrences."
+                }
             },
-            "required": ["task", "reasoning_effort", "model"]
+            "required": ["file_path", "pattern", "replacement"]
         }
     }
 }
