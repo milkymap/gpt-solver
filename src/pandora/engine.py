@@ -6,6 +6,10 @@ from operator import itemgetter, attrgetter
 from typing import List, Tuple, Dict, Any, Optional, AsyncIterable, AsyncGenerator, Self
 
 from pydantic import BaseModel
+from rich import print as rprint
+from rich.panel import Panel
+from rich.text import Text
+from rich.syntax import Syntax
 
 from os import path, makedirs
 import subprocess
@@ -23,8 +27,6 @@ from pandora.definitions import (
 )
 
 FLAGS = ["IGNORECASE", "MULTILINE", "DOTALL", "VERBOSE", "ASCII", "LOCALE"]
-
-# nice, please create a workspace dir and inside, create a full python project for clustering with sentence transformers and umap, this will build clustering image. create a plan and think step bu step. do not install depdenencies, modular project.
 
 class Engine:
     def __init__(self, mcp_handler:MCPHandler, openai_api_key:str, model:str="gpt-4.1", parallel_tool_calls:bool=True):
@@ -171,7 +173,8 @@ class Engine:
             else:
                 target_function = attrgetter(name)(self)
                 result = await target_function(**kwargs)
-            print(result)
+            if name != "print_message":
+                print(result)
         except Exception as e:
             logger.error(e)
             result = f"Error: {str(e)}"
@@ -182,7 +185,7 @@ class Engine:
             tool_call_id=tool_call_id
         )
     
-    async def print_message(self, message:str, message_type:str="reply") -> str:
+    async def print_message(self, message:str, message_type:str="reply", print_mode:str="rich") -> str:
         match message_type:
             case "reply" | "ask" | "confirm":
                 self.internal_state = 0
@@ -190,6 +193,30 @@ class Engine:
                 self.internal_state = 1
             case _:
                 raise ValueError(f"Invalid message type: {message_type}")
+
+        # Rich formatting implementation
+        if print_mode == "rich":
+            type_colors = {
+                "think": "bold blue",
+                "ask": "bold yellow",
+                "confirm": "bold magenta",
+                "analyze": "bold cyan",
+                "notify": "bold green",
+                "update": "bold white",
+                "reply": "bold"
+            }
+
+            color = type_colors.get(message_type, "bold")
+            title = f"{message_type.upper()}"
+
+            rprint(Panel(
+                Text(message, style=color),
+                title=title,
+                title_align="left",
+                border_style=color,
+                padding=(1, 2)
+            ))
+
         return json.dumps({
             "message": message,
             "message_type": message_type,
@@ -354,7 +381,6 @@ class Engine:
             raise FileNotFoundError(f"File {file_path} does not exist")
         
         # Convert string flags to regex flags
-
         regex_flags = 0
         if flags:
             for flag in flags:
@@ -393,5 +419,3 @@ class Engine:
             
         except re.error as e:
             raise ValueError(f"Invalid regex pattern: {e}")
-    
-

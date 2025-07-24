@@ -48,6 +48,12 @@ PRINT_MESSAGE ={
                     "enum": ["think", "ask", "confirm", "analyze" ,"notify", "update", "reply"],
                     "default": "reply",
                     "description": "The type of message to display. It will be used to determine the message type and the way to display it to the user."
+                },
+                "print_mode": {
+                    "type": "string",
+                    "enum": ["json", "rich"],
+                    "default": "json",
+                    "description": "Output format: 'json' for raw JSON, 'rich' for formatted terminal output"
                 }
             }, 
             "required": ["message", "message_type"]
@@ -314,4 +320,3 @@ APPLY_REGEX = {
         }
     }
 }
-
