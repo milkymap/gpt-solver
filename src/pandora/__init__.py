@@ -1,34 +1,23 @@
-import click 
-from pandora.engine import Engine
-from pandora.mcp_servers_handler import MCPHandler
-from os import getenv
-import asyncio
-from typing import Optional
+from .cli import main
+from .core.engine import Engine
+from .mcp.handler import MCPHandler
+from .tools import (
+    FileReader, FileCreator, FileEditor,
+    RegexApplier, WebSearcher, BashExecutor,
+    PlanGenerator, MessageFormatter
+)
 
-@click.command()
-@click.option("--model", "-m", type=click.Choice(["gpt-4.1", "gpt-4.1-mini"]), default="gpt-4.1")
-@click.option("--openai_api_key", "-k", type=str, envvar="OPENAI_API_KEY", required=True)
-@click.option("--path2mcp_servers_file", "-mcp", type=click.Path(exists=False, dir_okay=False))
-@click.option("--startup_timeout", "-t", type=float, default=10.0)
-@click.option("--parallel_tool_calls", "-p", is_flag=True, default=False)
-@click.option("--print_mode", type=click.Choice(["json", "rich"]), default="rich", 
-              help="Output format: 'json' for raw JSON, 'rich' for formatted terminal output")
-def main(model: str, openai_api_key: str, path2mcp_servers_file: Optional[str] = None, 
-         startup_timeout: float = 10.0, parallel_tool_calls: bool = False, print_mode: str = "rich") -> None:
-    async def main_loop():
-        mcp_handler = MCPHandler(
-            path2mcp_servers_file=path2mcp_servers_file, 
-            startup_timeout=startup_timeout
-        )
-        async with mcp_handler as mcp_handler:
-            await mcp_handler.launch_mcp_servers()
-            engine = Engine(
-                mcp_handler=mcp_handler,
-                openai_api_key=openai_api_key, 
-                model=model,
-                parallel_tool_calls=parallel_tool_calls,
-                default_print_mode=print_mode
-            )
-            async with engine as engine:
-                await engine.loop()
-    asyncio.run(main_loop())
+__version__ = "0.1.0"
+__all__ = [
+    'main',
+    'Engine',
+    'MCPHandler',
+    'FileReader',
+    'FileCreator',
+    'FileEditor',
+    'RegexApplier',
+    'WebSearcher',
+    'BashExecutor',
+    'PlanGenerator',
+    'MessageFormatter'
+]

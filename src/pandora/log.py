@@ -1,4 +1,4 @@
-import logging 
+import logging
 
 logging.basicConfig(
     level=logging.INFO,
@@ -8,4 +8,4 @@ logging.basicConfig(
 logger = logging.getLogger(name="pandora")
 
 if __name__ == "__main__":
-    logger.info("log module initialized")
+    logger.info("Log module initialized")
