@@ -23,3 +23,7 @@ config/
 .pytest_cache/
 
 .env
+
+pandora.txt
+.github/
+.editignore
